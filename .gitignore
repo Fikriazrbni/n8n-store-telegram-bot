@@ -1,0 +1,21 @@
+# n8n data (JANGAN DI-PUSH!)
+.n8n/
+n8n_data/
+
+# Docker volumes
+postgres_data/
+
+# Environment variables (credentials!)
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

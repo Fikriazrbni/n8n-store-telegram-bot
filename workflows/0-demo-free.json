@@ -1,0 +1,330 @@
+{
+  "name": "DEMO - Free Workflow (No Paid API)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule: Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISO()}}"
+            },
+            {
+              "name": "message",
+              "value": "Hello from n8n automation!"
+            },
+            {
+              "name": "random_number",
+              "value": "={{Math.floor(Math.random() * 100)}}"
+            }
+          ]
+        }
+      },
+      "id": "set-data",
+      "name": "Generate Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{$json.timestamp}}",
+            "message": "={{$json.message}}",
+            "random_number": "={{$json.random_number}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [650, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{$env.TELEGRAM_CHAT_ID}}"
+            },
+            {
+              "name": "text",
+              "value": "=🤖 *n8n Automation Report*\n\nTime: {{$json.timestamp}}\nRandom Number: {{$json.random_number}}\n\nWorkflow running successfully! ✅"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-telegram",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook (Test Trigger)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "demo-webhook"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "received_data",
+              "value": "={{JSON.stringify($json.body)}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISO()}}"
+            }
+          ]
+        }
+      },
+      "id": "process-webhook",
+      "name": "Process Webhook Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"message\": \"Data received!\", \"timestamp\": \"{{$json.timestamp}}\"}"
+      },
+      "id": "webhook-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "options": {}
+      },
+      "id": "fetch-api",
+      "name": "Fetch Public API (Free)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [250, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process API data\nconst data = $input.first().json;\n\nreturn {\n  json: {\n    title: data.title,\n    body: data.body,\n    processed_at: new Date().toISOString(),\n    word_count: data.body.split(' ').length\n  }\n};"
+      },
+      "id": "process-api-data",
+      "name": "Process API Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.word_count}}",
+              "operation": "larger",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "check-condition",
+      "name": "Check Word Count",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 700]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Long content detected!"
+            }
+          ]
+        }
+      },
+      "id": "long-content",
+      "name": "Long Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 600]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Short content"
+            }
+          ]
+        }
+      },
+      "id": "short-content",
+      "name": "Short Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 800]
+    }
+  ],
+  "connections": {
+    "Schedule: Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Generate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Data": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (Test Trigger)": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Public API (Free)": {
+      "main": [
+        [
+          {
+            "node": "Process API Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process API Data": {
+      "main": [
+        [
+          {
+            "node": "Check Word Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Word Count": {
+      "main": [
+        [
+          {
+            "node": "Long Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Short Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

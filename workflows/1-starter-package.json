@@ -1,0 +1,264 @@
+{
+  "name": "Starter Package - Auto Reply WA + Order Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-wa",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-incoming"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.message}}",
+              "operation": "contains",
+              "value2": "order"
+            }
+          ]
+        }
+      },
+      "id": "check-order",
+      "name": "Cek Kata 'Order'",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "phone",
+              "value": "={{$json.body.from}}"
+            },
+            {
+              "name": "message",
+              "value": "={{$json.body.message}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISO()}}"
+            },
+            {
+              "name": "type",
+              "value": "order"
+            }
+          ]
+        }
+      },
+      "id": "format-order",
+      "name": "Format Data Order",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "Sheet1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone": "={{$json.phone}}",
+            "message": "={{$json.message}}",
+            "timestamp": "={{$json.timestamp}}",
+            "status": "pending"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheet",
+      "name": "Simpan ke Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [850, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=🎉 *Terima kasih sudah order!*\n\nPesanan Anda:\n{{$json.message}}\n\nOrder ID: #{{$json.timestamp.slice(0,10)}}\n\nTim kami akan segera memproses. Mohon tunggu konfirmasi ya! 🙏",
+        "additionalFields": {
+          "phone": "={{$json.phone}}"
+        }
+      },
+      "id": "reply-order",
+      "name": "Balas Pesan Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "2",
+          "name": "WhatsApp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔔 *ORDER BARU!*\n\nDari: {{$json.phone}}\nPesan: {{$json.message}}\nWaktu: {{$json.timestamp}}\n\n👉 Segera proses!"
+      },
+      "id": "notify-admin",
+      "name": "Notif ke Admin (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1050, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "reply",
+              "value": "Terima kasih sudah menghubungi kami! Ada yang bisa kami bantu? 😊"
+            }
+          ]
+        }
+      },
+      "id": "auto-reply-general",
+      "name": "Auto Reply Umum",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "text": "={{$json.reply}}",
+        "additionalFields": {
+          "phone": "={{$node['Webhook WhatsApp'].json.body.from}}"
+        }
+      },
+      "id": "send-reply-general",
+      "name": "Kirim Balasan Umum",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"message\": \"processed\"}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Cek Kata 'Order'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek Kata 'Order'": {
+      "main": [
+        [
+          {
+            "node": "Format Data Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auto Reply Umum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data Order": {
+      "main": [
+        [
+          {
+            "node": "Simpan ke Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ke Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Balas Pesan Order",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notif ke Admin (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Balas Pesan Order": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto Reply Umum": {
+      "main": [
+        [
+          {
+            "node": "Kirim Balasan Umum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Balasan Umum": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

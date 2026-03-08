@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoToko - Otomasi Toko Online Anda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .cta-button {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .hero p {
+            font-size: 24px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        .hero-cta {
+            background: #ffd700;
+            color: #333;
+            padding: 18px 50px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 20px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .hero-cta:hover {
+            background: #ffed4e;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        /* Problem Section */
+        .problem {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+        
+        .problem h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+            color: #333;
+        }
+        
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        
+        .problem-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .problem-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .problem-card h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        /* Solution Section */
+        .solution {
+            padding: 80px 0;
+        }
+        
+        .solution h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+        }
+        
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .solution-card {
+            text-align: center;
+        }
+        
+        .solution-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .solution-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        /* Pricing Section */
+        .pricing {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+        
+        .pricing h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .pricing-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .pricing-card.featured {
+            border: 3px solid #667eea;
+            transform: scale(1.05);
+        }
+        
+        .pricing-badge {
+            background: #ffd700;
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .pricing-card h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .price {
+            font-size: 42px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .price-period {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .features {
+            list-style: none;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .features li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .pricing-button {
+            background: #667eea;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .pricing-button:hover {
+            background: #764ba2;
+        }
+        
+        /* Testimonials */
+        .testimonials {
+            padding: 80px 0;
+        }
+        
+        .testimonials h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+        }
+        
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .testimonial-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .testimonial-text {
+            font-style: italic;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        
+        .testimonial-author {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        /* CTA Section */
+        .final-cta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .final-cta h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+        }
+        
+        .final-cta p {
+            font-size: 20px;
+            margin-bottom: 40px;
+        }
+        
+        /* Footer */
+        footer {
+            background: #333;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        .contact-info {
+            margin-bottom: 20px;
+        }
+        
+        .contact-info a {
+            color: #ffd700;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+            
+            .hero p {
+                font-size: 18px;
+            }
+            
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">🤖 AutoToko</div>
+                <a href="#pricing" class="cta-button">Lihat Paket</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Otomasi Toko Online Anda dalam 24 Jam</h1>
+            <p>Hemat waktu 10+ jam per minggu dengan automation cerdas</p>
+            <a href="#pricing" class="hero-cta">Mulai Sekarang - Gratis Konsultasi!</a>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem">
+        <div class="container">
+            <h2>Masalah yang Sering Dialami Pemilik Toko Online</h2>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">😫</div>
+                    <h3>Balas Chat Manual</h3>
+                    <p>Capek balas ratusan chat WhatsApp setiap hari? Pelanggan nunggu lama?</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">📝</div>
+                    <h3>Bikin Invoice Manual</h3>
+                    <p>Buang waktu buat invoice satu-satu? Sering salah hitung?</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">📦</div>
+                    <h3>Lupa Cek Stok</h3>
+                    <p>Barang tiba-tiba habis? Pelanggan kecewa karena stok kosong?</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">📊</div>
+                    <h3>Ga Tau Performa</h3>
+                    <p>Bingung mau analisa penjualan? Data berantakan di mana-mana?</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section class="solution">
+        <div class="container">
+            <h2>Solusi Automation untuk Toko Online Anda</h2>
+            <div class="solution-grid">
+                <div class="solution-card">
+                    <div class="solution-icon">⚡</div>
+                    <h3>Auto-Reply Instant</h3>
+                    <p>Balas chat pelanggan otomatis 24/7. Notifikasi langsung ke Telegram saat ada order baru.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-icon">📄</div>
+                    <h3>Invoice Otomatis</h3>
+                    <p>Generate invoice PDF profesional otomatis. Kirim langsung ke pelanggan via WhatsApp.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-icon">🔔</div>
+                    <h3>Alert Stok Rendah</h3>
+                    <p>Notifikasi otomatis saat stok menipis. Ga akan kehabisan barang lagi!</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-icon">📈</div>
+                    <h3>Laporan Harian & Bulanan</h3>
+                    <p>Dashboard analytics otomatis. Tau performa toko setiap hari tanpa ribet.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <h2>Pilih Paket yang Sesuai untuk Bisnis Anda</h2>
+            <div class="pricing-grid">
+                <!-- Starter Package -->
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <div class="price">Rp 1jt</div>
+                    <div class="price-period">Setup sekali bayar</div>
+                    <ul class="features">
+                        <li>Auto-reply WhatsApp 24/7</li>
+                        <li>Notifikasi order ke Telegram</li>
+                        <li>Database order di Google Sheets</li>
+                        <li>Setup & training 2 jam</li>
+                        <li>Support 1 bulan</li>
+                    </ul>
+                    <a href="#contact" class="pricing-button">Pilih Paket</a>
+                </div>
+
+                <!-- Growth Package -->
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">PALING POPULER</div>
+                    <h3>Growth</h3>
+                    <div class="price">Rp 3jt</div>
+                    <div class="price-period">Setup sekali bayar</div>
+                    <ul class="features">
+                        <li>Semua fitur Starter</li>
+                        <li>Invoice generator otomatis (PDF)</li>
+                        <li>Kirim invoice via WhatsApp</li>
+                        <li>Alert stok rendah otomatis</li>
+                        <li>Inventory management</li>
+                        <li>Setup & training 4 jam</li>
+                        <li>Support 3 bulan</li>
+                    </ul>
+                    <a href="#contact" class="pricing-button">Pilih Paket</a>
+                </div>
+
+                <!-- Pro Package -->
+                <div class="pricing-card">
+                    <h3>Pro</h3>
+                    <div class="price">Rp 5jt</div>
+                    <div class="price-period">Setup sekali bayar</div>
+                    <ul class="features">
+                        <li>Semua fitur Growth</li>
+                        <li>Multi-channel (WA, IG, Telegram)</li>
+                        <li>Laporan harian otomatis</li>
+                        <li>Laporan bulanan + analytics</li>
+                        <li>Dashboard performa real-time</li>
+                        <li>Custom automation request</li>
+                        <li>Setup & training 6 jam</li>
+                        <li>Support 6 bulan</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <a href="#contact" class="pricing-button">Pilih Paket</a>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 40px;">
+                <p style="font-size: 18px; color: #666;">💡 <strong>Maintenance bulanan:</strong> Rp 300k - 500k/bulan (opsional)</p>
+                <p style="font-size: 16px; color: #666; margin-top: 10px;">Termasuk: monitoring, update workflow, technical support</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="container">
+            <h2>Apa Kata Mereka?</h2>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-text">
+                        "Dulu saya harus balas chat sampai tengah malam. Sekarang semua otomatis! Hemat waktu banget, bisa fokus ke produksi."
+                    </div>
+                    <div class="testimonial-author">- Ibu Siti, Toko Kue Online</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-text">
+                        "Invoice otomatis ini game changer! Ga perlu lagi bikin manual satu-satu. Pelanggan juga senang karena cepat."
+                    </div>
+                    <div class="testimonial-author">- Mas Budi, Fashion Store</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-text">
+                        "Laporan harian bikin saya tau persis performa toko. Sekarang bisa ambil keputusan bisnis lebih cepat dan tepat."
+                    </div>
+                    <div class="testimonial-author">- Mbak Rina, Kosmetik Online</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta" id="contact">
+        <div class="container">
+            <h2>Siap Otomasi Toko Online Anda?</h2>
+            <p>Konsultasi GRATIS untuk menentukan paket yang tepat</p>
+            <a href="https://wa.me/6281234567890?text=Halo,%20saya%20tertarik%20dengan%20AutoToko" class="hero-cta">
+                Chat WhatsApp Sekarang
+            </a>
+            <p style="margin-top: 30px; font-size: 18px;">
+                📧 Email: hello@autotoko.id<br>
+                📱 WhatsApp: +62 812-3456-7890<br>
+                💬 Telegram: @autotoko
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="contact-info">
+                <a href="#">Instagram</a>
+                <a href="#">Facebook</a>
+                <a href="#">LinkedIn</a>
+            </div>
+            <p>&copy; 2024 AutoToko. All rights reserved.</p>
+            <p style="margin-top: 10px; font-size: 14px; color: #999;">
+                Powered by n8n Automation
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

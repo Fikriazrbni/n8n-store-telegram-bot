@@ -1,0 +1,332 @@
+{
+  "name": "Growth Package - Invoice Generator + Inventory Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-confirmed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-order",
+      "name": "Webhook Order Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "order-confirmed"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "customerName",
+              "value": "={{$json.body.customer_name}}"
+            },
+            {
+              "name": "customerPhone",
+              "value": "={{$json.body.customer_phone}}"
+            },
+            {
+              "name": "items",
+              "value": "={{$json.body.items}}"
+            },
+            {
+              "name": "total",
+              "value": "={{$json.body.total}}"
+            },
+            {
+              "name": "invoiceNumber",
+              "value": "=INV-{{$now.toFormat('yyyyMMdd')}}-{{Math.floor(Math.random()*1000)}}"
+            },
+            {
+              "name": "invoiceDate",
+              "value": "={{$now.toFormat('dd/MM/yyyy')}}"
+            }
+          ]
+        }
+      },
+      "id": "prepare-invoice",
+      "name": "Prepare Invoice Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "Invoices",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_number": "={{$json.invoiceNumber}}",
+            "date": "={{$json.invoiceDate}}",
+            "customer_name": "={{$json.customerName}}",
+            "customer_phone": "={{$json.customerPhone}}",
+            "items": "={{$json.items}}",
+            "total": "={{$json.total}}",
+            "status": "unpaid"
+          }
+        }
+      },
+      "id": "save-invoice",
+      "name": "Simpan Invoice",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [650, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n<style>\nbody { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }\n.header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; }\n.invoice-details { margin: 30px 0; }\n.items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }\n.items-table th, .items-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }\n.items-table th { background-color: #f2f2f2; }\n.total { text-align: right; font-size: 20px; font-weight: bold; margin-top: 20px; }\n.footer { margin-top: 50px; text-align: center; color: #666; }\n</style>\n</head>\n<body>\n<div class=\"header\">\n<h1>INVOICE</h1>\n<p>{{$json.invoiceNumber}}</p>\n</div>\n<div class=\"invoice-details\">\n<p><strong>Tanggal:</strong> {{$json.invoiceDate}}</p>\n<p><strong>Kepada:</strong> {{$json.customerName}}</p>\n<p><strong>No. HP:</strong> {{$json.customerPhone}}</p>\n</div>\n<table class=\"items-table\">\n<tr><th>Item</th><th>Jumlah</th><th>Harga</th></tr>\n<tr><td colspan=\"3\">{{$json.items}}</td></tr>\n</table>\n<div class=\"total\">\nTotal: Rp {{$json.total}}\n</div>\n<div class=\"footer\">\n<p>Terima kasih atas kepercayaan Anda!</p>\n<p>Pembayaran dapat dilakukan ke: BCA 1234567890 a.n. Toko Anda</p>\n</div>\n</body>\n</html>"
+      },
+      "id": "generate-invoice-html",
+      "name": "Generate Invoice HTML",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "convert",
+        "options": {
+          "fileName": "={{$json.invoiceNumber}}.pdf"
+        }
+      },
+      "id": "convert-to-pdf",
+      "name": "Convert to PDF",
+      "type": "n8n-nodes-base.htmlToPdf",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "text": "=📄 *INVOICE BARU*\n\nInvoice: {{$json.invoiceNumber}}\nCustomer: {{$json.customerName}}\nTotal: Rp {{$json.total}}\n\nInvoice PDF terlampir.",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "additionalFields": {
+          "document": "={{$json.data}}"
+        }
+      },
+      "id": "send-to-admin",
+      "name": "Kirim ke Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1250, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=Terima kasih ordernya kak {{$json.customerName}}! 🎉\n\nInvoice: {{$json.invoiceNumber}}\nTotal: Rp {{$json.total}}\n\nSilakan transfer ke:\nBCA 1234567890\na.n. Toko Anda\n\nKonfirmasi setelah transfer ya!",
+        "additionalFields": {
+          "phone": "={{$json.customerPhone}}",
+          "document": "={{$json.data}}"
+        }
+      },
+      "id": "send-to-customer",
+      "name": "Kirim ke Customer (WA)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-inventory-check",
+      "name": "Schedule: Cek Stok (6 jam)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 600]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": "Inventory",
+        "options": {}
+      },
+      "id": "read-inventory",
+      "name": "Baca Data Inventory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [450, 600],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.stock}}",
+              "operation": "smaller",
+              "value2": "={{$json.min_stock}}"
+            }
+          ]
+        }
+      },
+      "id": "check-low-stock",
+      "name": "Cek Stok Rendah",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 600]
+    },
+    {
+      "parameters": {
+        "text": "=⚠️ *ALERT: STOK RENDAH!*\n\nProduk: {{$json.product_name}}\nStok saat ini: {{$json.stock}}\nStok minimum: {{$json.min_stock}}\n\n👉 Segera restock!",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID"
+      },
+      "id": "alert-low-stock",
+      "name": "Alert Stok Rendah",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [850, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"invoice\": \"{{$json.invoiceNumber}}\"}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Order Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Prepare Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Simpan Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Invoice": {
+      "main": [
+        [
+          {
+            "node": "Generate Invoice HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Invoice HTML": {
+      "main": [
+        [
+          {
+            "node": "Convert to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to PDF": {
+      "main": [
+        [
+          {
+            "node": "Kirim ke Admin",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kirim ke Customer (WA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim ke Admin": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: Cek Stok (6 jam)": {
+      "main": [
+        [
+          {
+            "node": "Baca Data Inventory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Data Inventory": {
+      "main": [
+        [
+          {
+            "node": "Cek Stok Rendah",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek Stok Rendah": {
+      "main": [
+        [
+          {
+            "node": "Alert Stok Rendah",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

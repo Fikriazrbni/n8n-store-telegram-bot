@@ -1,0 +1,484 @@
+{
+  "name": "Pro Package - Multi-Channel + Analytics Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "multichannel-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-multichannel",
+      "name": "Webhook Multi-Channel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "multichannel-order"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "={{$json.body.channel}}"
+            },
+            {
+              "name": "orderId",
+              "value": "=ORD-{{$now.toFormat('yyyyMMddHHmmss')}}"
+            },
+            {
+              "name": "customerName",
+              "value": "={{$json.body.customer_name}}"
+            },
+            {
+              "name": "customerContact",
+              "value": "={{$json.body.customer_contact}}"
+            },
+            {
+              "name": "items",
+              "value": "={{$json.body.items}}"
+            },
+            {
+              "name": "total",
+              "value": "={{$json.body.total}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISO()}}"
+            },
+            {
+              "name": "date",
+              "value": "={{$now.toFormat('yyyy-MM-dd')}}"
+            }
+          ]
+        }
+      },
+      "id": "normalize-data",
+      "name": "Normalize Order Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "Orders",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order_id": "={{$json.orderId}}",
+            "channel": "={{$json.channel}}",
+            "date": "={{$json.date}}",
+            "customer_name": "={{$json.customerName}}",
+            "customer_contact": "={{$json.customerContact}}",
+            "items": "={{$json.items}}",
+            "total": "={{$json.total}}",
+            "status": "pending"
+          }
+        }
+      },
+      "id": "save-order",
+      "name": "Simpan Order",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [650, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.channel}}",
+              "value2": "whatsapp"
+            }
+          ]
+        }
+      },
+      "id": "route-channel",
+      "name": "Route by Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "text": "=Terima kasih ordernya! 🎉\n\nOrder ID: {{$json.orderId}}\nTotal: Rp {{$json.total}}\n\nKami akan proses segera!",
+        "additionalFields": {
+          "phone": "={{$json.customerContact}}"
+        }
+      },
+      "id": "reply-whatsapp",
+      "name": "Reply via WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "chatId": "={{$json.customerContact}}",
+        "text": "=Terima kasih ordernya! 🎉\n\nOrder ID: {{$json.orderId}}\nTotal: Rp {{$json.total}}\n\nKami akan proses segera!"
+      },
+      "id": "reply-telegram",
+      "name": "Reply via Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": "={{$json.customerContact}}",
+        "messageType": "text",
+        "text": "=Terima kasih ordernya! 🎉\n\nOrder ID: {{$json.orderId}}\nTotal: Rp {{$json.total}}\n\nKami akan proses segera!"
+      },
+      "id": "reply-instagram",
+      "name": "Reply via Instagram DM",
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "text": "=🔔 *ORDER BARU dari {{$json.channel}}*\n\nOrder ID: {{$json.orderId}}\nCustomer: {{$json.customerName}}\nKontak: {{$json.customerContact}}\nItems: {{$json.items}}\nTotal: Rp {{$json.total}}\n\n⏰ {{$json.timestamp}}",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID"
+      },
+      "id": "notify-admin",
+      "name": "Notif Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-daily-report",
+      "name": "Schedule: Daily Report (8 PM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 600]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": "Orders",
+        "options": {
+          "range": "A:H"
+        }
+      },
+      "id": "read-orders",
+      "name": "Baca Data Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [450, 600],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst orders = $input.all();\n\nconst todayOrders = orders.filter(o => o.json.date === today);\n\nconst stats = {\n  totalOrders: todayOrders.length,\n  totalRevenue: todayOrders.reduce((sum, o) => sum + parseFloat(o.json.total || 0), 0),\n  byChannel: {},\n  topProducts: {}\n};\n\ntodayOrders.forEach(order => {\n  const channel = order.json.channel;\n  stats.byChannel[channel] = (stats.byChannel[channel] || 0) + 1;\n});\n\nreturn [{ json: stats }];"
+      },
+      "id": "calculate-stats",
+      "name": "Calculate Daily Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 600]
+    },
+    {
+      "parameters": {
+        "text": "=📊 *LAPORAN HARIAN*\n{{$now.toFormat('dd MMMM yyyy')}}\n\n━━━━━━━━━━━━━━━━\n\n📦 Total Order: {{$json.totalOrders}}\n💰 Total Revenue: Rp {{$json.totalRevenue.toLocaleString('id-ID')}}\n\n📱 *Per Channel:*\n{{Object.entries($json.byChannel).map(([ch, count]) => `• ${ch}: ${count} orders`).join('\\n')}}\n\n━━━━━━━━━━━━━━━━\n\n💪 Keep up the good work!",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID"
+      },
+      "id": "send-daily-report",
+      "name": "Kirim Daily Report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [850, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-monthly-report",
+      "name": "Schedule: Monthly Report",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 800]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": "Orders",
+        "options": {}
+      },
+      "id": "read-all-orders",
+      "name": "Baca Semua Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [450, 800],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);\nconst lastMonthStr = lastMonth.toISOString().slice(0, 7);\n\nconst orders = $input.all();\nconst monthOrders = orders.filter(o => o.json.date?.startsWith(lastMonthStr));\n\nconst stats = {\n  month: lastMonth.toLocaleString('id-ID', { month: 'long', year: 'numeric' }),\n  totalOrders: monthOrders.length,\n  totalRevenue: monthOrders.reduce((sum, o) => sum + parseFloat(o.json.total || 0), 0),\n  avgOrderValue: 0,\n  byChannel: {},\n  growth: 0\n};\n\nstats.avgOrderValue = stats.totalOrders > 0 ? stats.totalRevenue / stats.totalOrders : 0;\n\nmonthOrders.forEach(order => {\n  const channel = order.json.channel;\n  stats.byChannel[channel] = (stats.byChannel[channel] || 0) + 1;\n});\n\nreturn [{ json: stats }];"
+      },
+      "id": "calculate-monthly-stats",
+      "name": "Calculate Monthly Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 800]
+    },
+    {
+      "parameters": {
+        "text": "=📈 *LAPORAN BULANAN*\n{{$json.month}}\n\n━━━━━━━━━━━━━━━━\n\n📦 Total Order: {{$json.totalOrders}}\n💰 Total Revenue: Rp {{$json.totalRevenue.toLocaleString('id-ID')}}\n💵 Rata-rata Order: Rp {{$json.avgOrderValue.toLocaleString('id-ID')}}\n\n📱 *Per Channel:*\n{{Object.entries($json.byChannel).map(([ch, count]) => `• ${ch}: ${count} orders (${(count/$json.totalOrders*100).toFixed(1)}%)`).join('\\n')}}\n\n━━━━━━━━━━━━━━━━\n\n🎯 Target bulan depan: Rp {{($json.totalRevenue * 1.2).toLocaleString('id-ID')}}",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID"
+      },
+      "id": "send-monthly-report",
+      "name": "Kirim Monthly Report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [850, 800],
+      "credentials": {
+        "telegramApi": {
+          "id": "3",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"order_id\": \"{{$json.orderId}}\"}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Multi-Channel": {
+      "main": [
+        [
+          {
+            "node": "Normalize Order Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Order Data": {
+      "main": [
+        [
+          {
+            "node": "Simpan Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Order": {
+      "main": [
+        [
+          {
+            "node": "Route by Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Channel": {
+      "main": [
+        [
+          {
+            "node": "Reply via WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply via Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply via Instagram DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply via WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Notif Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply via Telegram": {
+      "main": [
+        [
+          {
+            "node": "Notif Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply via Instagram DM": {
+      "main": [
+        [
+          {
+            "node": "Notif Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif Admin": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: Daily Report (8 PM)": {
+      "main": [
+        [
+          {
+            "node": "Baca Data Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Data Orders": {
+      "main": [
+        [
+          {
+            "node": "Calculate Daily Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Daily Stats": {
+      "main": [
+        [
+          {
+            "node": "Kirim Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: Monthly Report": {
+      "main": [
+        [
+          {
+            "node": "Baca Semua Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Semua Orders": {
+      "main": [
+        [
+          {
+            "node": "Calculate Monthly Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Monthly Stats": {
+      "main": [
+        [
+          {
+            "node": "Kirim Monthly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

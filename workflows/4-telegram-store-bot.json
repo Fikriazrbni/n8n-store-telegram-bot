@@ -1,0 +1,468 @@
+{
+  "name": "Telegram Store Bot (Manual)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate Telegram message untuk testing\n// Nanti ganti dengan real Telegram Trigger kalau sudah production\n\nreturn {\n  message: {\n    text: '/order Kopi Susu-2, Teh Manis-1',\n    chat: {\n      id: 530532204\n    },\n    from: {\n      username: 'testuser',\n      first_name: 'Test Customer'\n    }\n  }\n};"
+      },
+      "id": "simulate-message",
+      "name": "Simulate Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.message.text}}",
+              "operation": "startsWith",
+              "value2": "/order"
+            }
+          ]
+        }
+      },
+      "id": "check-order-command",
+      "name": "Check Order Command",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.item.json.message.text;\nconst chatId = $input.item.json.message.chat.id;\nconst username = $input.item.json.message.from.username || 'Unknown';\nconst firstName = $input.item.json.message.from.first_name || 'Customer';\n\nconst orderText = text.replace('/order', '').trim();\nconst items = orderText.split(',').map(item => item.trim());\n\nconst orderItems = [];\nfor (const item of items) {\n  const parts = item.split('-');\n  if (parts.length === 2) {\n    const productName = parts[0].trim();\n    const quantity = parseInt(parts[1].trim());\n    \n    if (productName && quantity > 0) {\n      orderItems.push({\n        product_name: productName,\n        quantity: quantity\n      });\n    }\n  }\n}\n\nreturn {\n  chat_id: chatId,\n  username: username,\n  customer_name: firstName,\n  order_items: orderItems,\n  order_text: orderText,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "parse-order",
+      "name": "Parse Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1EQqpvCrbquC5OV7iGTxrISdQeWcQxHKZtigzIzrIKV4",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Products",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "get-products",
+      "name": "Get Products",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1120, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get order data dari Parse Order node\nconst orderData = $('Parse Order').item.json;\n\n// Get products dari Google Sheets\nconst productsArray = $input.all();\nconst products = productsArray.map(item => item.json);\n\nconst validItems = [];\nconst invalidItems = [];\nlet totalAmount = 0;\n\n// Validate each order item\nfor (const orderItem of orderData.order_items) {\n  const product = products.find(p => \n    p.product_name.toLowerCase() === orderItem.product_name.toLowerCase()\n  );\n  \n  if (product) {\n    if (product.stock >= orderItem.quantity) {\n      const subtotal = product.price * orderItem.quantity;\n      validItems.push({\n        product_id: product.product_id,\n        product_name: product.product_name,\n        price: product.price,\n        quantity: orderItem.quantity,\n        subtotal: subtotal\n      });\n      totalAmount += subtotal;\n    } else {\n      invalidItems.push({\n        product_name: orderItem.product_name,\n        reason: `Stok tidak cukup (tersedia: ${product.stock})`\n      });\n    }\n  } else {\n    invalidItems.push({\n      product_name: orderItem.product_name,\n      reason: 'Produk tidak ditemukan'\n    });\n  }\n}\n\nreturn {\n  ...orderData,\n  valid_items: validItems,\n  invalid_items: invalidItems,\n  total_amount: totalAmount,\n  is_valid: invalidItems.length === 0 && validItems.length > 0\n};"
+      },
+      "id": "validate-order",
+      "name": "Validate Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.is_valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-valid",
+      "name": "Check Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst orderId = 'ORD-' + Date.now();\n\nreturn {\n  ...data,\n  order_id: orderId,\n  order_date: new Date().toISOString().split('T')[0],\n  status: 'pending'\n};"
+      },
+      "id": "generate-order-id",
+      "name": "Generate Order ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 100]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1EQqpvCrbquC5OV7iGTxrISdQeWcQxHKZtigzIzrIKV4",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order_id": "={{$json.order_id}}",
+            "order_date": "={{$json.order_date}}",
+            "customer_name": "={{$json.customer_name}}",
+            "username": "={{$json.username}}",
+            "chat_id": "={{$json.chat_id}}",
+            "total_amount": "={{$json.total_amount}}",
+            "status": "={{$json.status}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-order",
+      "name": "Save Order",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2000, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data dari Generate Order ID node\nconst data = $('Generate Order ID').item.json;\nconst orderDetails = [];\n\nfor (const item of data.valid_items) {\n  orderDetails.push({\n    order_id: data.order_id,\n    product_id: item.product_id,\n    product_name: item.product_name,\n    price: item.price,\n    quantity: item.quantity,\n    subtotal: item.subtotal\n  });\n}\n\nreturn orderDetails;"
+      },
+      "id": "prepare-order-details",
+      "name": "Prepare Order Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 100]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1EQqpvCrbquC5OV7iGTxrISdQeWcQxHKZtigzIzrIKV4",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Order_Details",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order_id": "={{$json.order_id}}",
+            "product_id": "={{$json.product_id}}",
+            "product_name": "={{$json.product_name}}",
+            "price": "={{$json.price}}",
+            "quantity": "={{$json.quantity}}",
+            "subtotal": "={{$json.subtotal}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-order-details",
+      "name": "Save Order Details",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2440, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data dari Generate Order ID node\nconst data = $('Generate Order ID').item.json;\n\nlet message = `🧾 *INVOICE*\\n\\n`;\nmessage += `Order ID: ${data.order_id}\\n`;\nmessage += `Tanggal: ${data.order_date}\\n`;\nmessage += `Customer: ${data.customer_name}\\n\\n`;\nmessage += `*Detail Pesanan:*\\n`;\nmessage += `━━━━━━━━━━━━━━━━\\n`;\n\nfor (const item of data.valid_items) {\n  message += `${item.product_name}\\n`;\n  message += `  ${item.quantity} x Rp ${item.price.toLocaleString('id-ID')} = Rp ${item.subtotal.toLocaleString('id-ID')}\\n\\n`;\n}\n\nmessage += `━━━━━━━━━━━━━━━━\\n`;\nmessage += `*TOTAL: Rp ${data.total_amount.toLocaleString('id-ID')}*\\n\\n`;\nmessage += `Status: ⏳ Pending\\n\\n`;\nmessage += `Terima kasih sudah order! 🙏`;\n\nreturn {\n  chat_id: data.chat_id,\n  message: message\n};"
+      },
+      "id": "format-invoice",
+      "name": "Format Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 100]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "={{$json.message}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-invoice",
+      "name": "Send Invoice",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2880, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\nlet message = `❌ *Order Gagal*\\n\\n`;\n\nif (data.invalid_items.length > 0) {\n  message += `*Produk bermasalah:*\\n`;\n  for (const item of data.invalid_items) {\n    message += `• ${item.product_name}: ${item.reason}\\n`;\n  }\n  message += `\\n`;\n}\n\nif (data.valid_items.length === 0) {\n  message += `Tidak ada produk yang valid.\\n\\n`;\n}\n\nmessage += `*Format order yang benar:*\\n`;\nmessage += `/order Produk1-qty, Produk2-qty\\n\\n`;\nmessage += `Contoh:\\n`;\nmessage += `/order Kopi Susu-2, Teh Manis-1`;\n\nreturn {\n  chat_id: data.chat_id,\n  message: message\n};"
+      },
+      "id": "format-error",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "={{$json.message}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-error",
+      "name": "Send Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2000, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId = $input.item.json.message.chat.id;\n\nconst message = `🤖 *Telegram Store Bot*\\n\\n` +\n  `*Cara Order:*\\n` +\n  `/order NamaProduk-qty, NamaProduk-qty\\n\\n` +\n  `*Contoh:*\\n` +\n  `/order Kopi Susu-2, Teh Manis-1\\n\\n` +\n  `*Produk Tersedia:*\\n` +\n  `• Kopi Susu (Rp 15,000)\\n` +\n  `• Teh Manis (Rp 10,000)\\n` +\n  `• Jus Jeruk (Rp 18,000)\\n` +\n  `• Air Mineral (Rp 5,000)\\n\\n` +\n  `Selamat berbelanja! 🛒`;\n\nreturn {\n  chat_id: chatId,\n  message: message\n};"
+      },
+      "id": "help-message",
+      "name": "Help Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "={{$json.message}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Simulate Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulate Message": {
+      "main": [
+        [
+          {
+            "node": "Check Order Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Order Command": {
+      "main": [
+        [
+          {
+            "node": "Parse Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Order": {
+      "main": [
+        [
+          {
+            "node": "Get Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Products": {
+      "main": [
+        [
+          {
+            "node": "Validate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order": {
+      "main": [
+        [
+          {
+            "node": "Check Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid": {
+      "main": [
+        [
+          {
+            "node": "Generate Order ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Order ID": {
+      "main": [
+        [
+          {
+            "node": "Save Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Order": {
+      "main": [
+        [
+          {
+            "node": "Prepare Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Order Details": {
+      "main": [
+        [
+          {
+            "node": "Save Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Order Details": {
+      "main": [
+        [
+          {
+            "node": "Format Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Invoice": {
+      "main": [
+        [
+          {
+            "node": "Send Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Send Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Help Message": {
+      "main": [
+        [
+          {
+            "node": "Send Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
